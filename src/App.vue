@@ -104,7 +104,7 @@
 
 <script>
     import Dropdown from './components/Dropdown.vue'
-    import { IrisClient } from 'sdk-js'
+    import { IrisClient } from 'irishub-sdk-js'
     import { CoinSwap, Token } from './script/Coinswap'
 
     const AddLiquidity = 'Add Liquidity'
@@ -132,7 +132,7 @@
                 filterData: [],
                 decimals: {},
                 i_data: [{
-                    value: 'iris-atto',
+                    value: 'uiris',
                     label: 'IRIS',
                 }],
                 msg: '',
@@ -170,26 +170,27 @@
         methods: {
             init() {
                 client.getTokens().then(res => {
-                    res.forEach(item => {
-                        let token = item.base_token
-                        let uDenom = Token.getUniDenom(token.id)
+                    res.result.forEach(item => {
+                        let token = item.value
+                        let uDenom = Token.getUniDenom(token.symbol)
                         let option = {
                             value: uDenom,
                             label: token.symbol.toUpperCase(),
                         }
                         this.data.push(option)
-                        this.decimals[uDenom] = token.decimal
+                        this.decimals[uDenom] = token.scale
 
-                        if (token.id !== 'iris') {
+                        if (token.symbol !== 'iris') {
                             this.poolLiquidity.push({
                                 value: uDenom,
-                                label: Token.getUniDenom(token.id).toUpperCase(),
+                                label: Token.getUniDenom(token.symbol).toUpperCase(),
                             })
                             this.filterData.push(option)
                         }
                     })
                     this.isActive = swap.ledger.isActive()
-                }).catch(() => {
+                }).catch(e => {
+                    window.console.log(e)
                     this.showError('init page error!')
                 })
             },
@@ -263,21 +264,24 @@
                     client.tradeIrisForExactTokens(outputDenom, outputAmt).then(data => {
                         this.swapInput = Token.toFix(data.toNumber() / Math.pow(10, this.decimals[inputDenom]))
                         this.showRate(data.toNumber(), inputDenom, outputAmt, outputDenom)
-                    }).catch((e) => {
+                    }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
                 } else if (outputDenom === 'uni:iris') {
                     client.tradeTokensForExactIris(inputDenom, outputAmt).then(data => {
                         this.swapInput = Token.toFix(data.toNumber() / Math.pow(10, this.decimals[inputDenom]))
                         this.showRate(data.toNumber(), inputDenom, outputAmt, outputDenom)
-                    }).catch((e) => {
+                    }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
                 } else {
                     client.tradeTokensForExactTokens(inputDenom, outputDenom, outputAmt).then(data => {
                         this.swapInput = Token.toFix(data.toNumber() / Math.pow(10, this.decimals[inputDenom]))
                         this.showRate(data.toNumber(), inputDenom, outputAmt, outputDenom)
-                    }).catch((e) => {
+                    }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
 
@@ -304,21 +308,24 @@
                     client.tradeExactIrisForTokens(outputDenom, inputAmt).then(data => {
                         this.swapOutput = Token.toFix(data.toNumber() / Math.pow(10, this.decimals[outputDenom]))
                         this.showRate(inputAmt, inputDenom, data.toNumber(), outputDenom)
-                    }).catch((e) => {
+                    }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
                 } else if (outputDenom === 'uni:iris') {
                     client.tradeExactTokensForIris(inputDenom, inputAmt).then(data => {
                         this.swapOutput = Token.toFix(data.toNumber() / Math.pow(10, this.decimals[outputDenom]))
                         this.showRate(inputAmt, inputDenom, data.toNumber(), outputDenom)
-                    }).catch((e) => {
+                    }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
                 } else {
                     client.tradeExactTokensForTokens(inputDenom, outputDenom, inputAmt).then(data => {
                         this.swapOutput = Token.toFix(data.toNumber() / Math.pow(10, this.decimals[outputDenom]))
                         this.showRate(inputAmt, inputDenom, data.toNumber(), outputDenom)
-                    }).catch((e) => {
+                    }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
                 }
@@ -359,15 +366,17 @@
                     if (!data) {
                         return
                     }
-                    let token = data.token
-                    let iris = data.iris
+
+                    let token = data.result.token
+                    let iris = data.result.standard
+
                     let tokenUdenom = Token.minTokenToUniDenom(token.denom)
                     let irisUdenom = Token.minTokenToUniDenom(iris.denom)
 
                     let tokenMainDenom = Token.getMainDenom(tokenUdenom)
                     let irisMainDenom = Token.getMainDenom(irisUdenom)
 
-                    if (data.liquidity.amount === '0') {
+                    if (data.result.liquidity.amount === '0') {
                         this.poolState.size = ` ${this.swapInput} ${irisMainDenom} + ${this.swapOutput} ${tokenMainDenom}`
                         this.isActive = swap.ledger.isActive()
                         return
@@ -387,9 +396,10 @@
                     let deltaIris = this.poolIrisAmt * Math.pow(10, this.decimals[irisUdenom])
                     let deltaToken = (deltaIris / iris.amount) * token.amount
                     this.poolTokenAmt = Token.toFix(deltaToken / Math.pow(10, this.decimals[tokenUdenom]))
-                    this.mintLiquidity = Token.toFix(((data.liquidity.amount * deltaIris) / iris.amount + 1) / Math.pow(10, this.decimals[irisUdenom]))
+                    this.mintLiquidity = Token.toFix(((data.result.liquidity.amount * deltaIris) / iris.amount + 1) / Math.pow(10, this.decimals[irisUdenom]))
                     this.isActive = swap.ledger.isActive()
-                }).catch(() => {
+                }).catch(e => {
+                    window.console.log(e)
                     this.showError(`liquidity pool ${denom} not exist !`)
                 })
                 this.clearError()
@@ -405,8 +415,9 @@
                         this.showError(`liquidity ${denom} equal zero `)
                         return
                     }
-                    let token = data.token
-                    let iris = data.iris
+
+                    let token = data.result.token
+                    let iris = data.result.standard
 
                     let tokenUdenom = Token.minTokenToUniDenom(token.denom)
                     let irisUdenom = Token.minTokenToUniDenom(iris.denom)
@@ -416,7 +427,7 @@
                     let reserveTokenAmt = Token.toFix(token.amount / Math.pow(10, this.decimals[tokenUdenom]))
                     let reserveIrisAmt = Token.toFix(iris.amount / Math.pow(10, this.decimals[irisUdenom]))
 
-                    let liquidityAmt = data.liquidity.amount
+                    let liquidityAmt = data.result.liquidity.amount
                     let deltaliquidity = parent.poolLiquidityAmt * Math.pow(10, parent.decimals[irisUdenom])
                     let delta = deltaliquidity / liquidityAmt
 
@@ -434,7 +445,8 @@
                         size: `${reserveIrisAmt} ${irisMainDenom} + ${reserveTokenAmt} ${tokenMainDenom}`,
                     }
                     parent.isActive = swap.ledger.isActive()
-                }).catch(() => {
+                }).catch(e => {
+                    window.console.log(e)
                     this.showError(`liquidity pool ${denom} not exist !`)
                 })
                 this.clearError()
@@ -455,6 +467,7 @@
                     this.tipType = 'success'
                     this.msg = `${result.hash}`
                 }).catch(e => {
+                    window.console.log(e)
                     this.showError(`${e}`)
                 })
             },
@@ -476,17 +489,19 @@
                         this.tipType = 'success'
                         this.msg = `${result.hash}`
                     }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
                 } else if (this.methodDesc === RemoveLiquidity) {
                     let withdrawLiquidity = {
-                        denom: `${this.poolLiquidityDropdown}-min`,
+                        denom: `u${this.poolLiquidityDropdown}`,
                         amount: String(this.poolLiquidityAmt * Math.pow(10, this.decimals[this.poolLiquidityDropdown])),
                     }
                     swap.sendRemoveLiquidityTx(withdrawLiquidity, this.deltaIrisAmt, this.deltaTokenAmt).then(result => {
                         this.tipType = 'success'
                         this.msg = `${result.hash}`
                     }).catch(e => {
+                        window.console.log(e)
                         this.showError(`${e}`)
                     })
                 }

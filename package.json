@@ -11,10 +11,10 @@
     "dependencies": {
         "core-js": "^2.6.5",
         "element-ui": "^2.11.1",
-        "sdk-js": "git+https://github.com/zhiqiang-bianjie/sdk-js.git#ledger",
         "vue": "^2.6.10",
         "@ledgerhq/hw-transport-webusb": "latest",
-        "iris-crypto": "git+https://github.com/zhiqiang-bianjie/irisnet-crypto.git#ledger"
+        "irisnet-crypto": "git+https://github.com/hangts/irisnet-crypto.git#feature/RPC",
+        "irishub-sdk-js": "git+https://github.com/SegueII/irishub-sdk-js.git#ledger"
     },
     "devDependencies": {
         "@vue/cli-plugin-babel": "^3.10.0",

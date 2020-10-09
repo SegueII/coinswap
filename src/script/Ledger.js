@@ -1,5 +1,5 @@
 import TransportWebUSB from '@ledgerhq/hw-transport-webusb'
-import * as crypto from 'iris-crypto'
+import * as crypto from 'irisnet-crypto'
 
 const path = [44, 118, 0, 0, 0]
 
@@ -14,17 +14,19 @@ export class Ledger {
     getAddressAndPubKey() {
         return this.app.getAddressAndPubKey(path, 'faa').then((result) => {
             return { addr: result.bech32_address, pubKey: result.compressed_pk }
-        }).catch(() => {
+        }).catch(e => {
+            window.console.log(e)
             this.app = null
-            throw new Error('connect ledger failed,please reconnection ledger')
+            throw new Error('connect ledger failed, please reconnection ledger')
         })
     }
     signTx(msg) {
         return this.app.sign(path, msg).then((response) => {
             return response.signature
-        }).catch(() => {
+        }).catch(e => {
+            window.console.log(e)
             this.app = null
-            throw new Error('connect ledger failed,please reconnection ledger')
+            throw new Error('connect ledger failed, please reconnection ledger')
         })
     }
     isActive() {
@@ -34,22 +36,24 @@ export class Ledger {
 
 function _createLedgerApp (callback) {
     let appCreate = (okFun, failFun) => {
-        TransportWebUSB.create().then((transport) => {
+        TransportWebUSB.create().then(transport => {
             crypto.getLedger().create(transport).then((app) => {
                 okFun(app)
             })
-        }).catch((err) => {
-            failFun(err)
+        }).catch(e => {
+            // XXX
+            window.console.log(e)
+            failFun(e)
         })
     }
     let timer = setInterval(async () => {
-        appCreate((app) => {
+        appCreate(app => {
             if (app !== null) {
                 clearInterval(timer)
                 callback(app)
             }
-        }, (err) => {
-            if (err && err.name === 'TransportOpenUserCancelled') {
+        }, e => {
+            if (e && e.name === 'TransportOpenUserCancelled') {
                 clearInterval(timer)
             }
         })

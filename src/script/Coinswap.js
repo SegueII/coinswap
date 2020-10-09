@@ -1,7 +1,7 @@
 import { Ledger } from './Ledger'
 
 
-const fee = { denom: 'iris-atto', amount: process.env.VUE_APP_HUB_TX_FEE }
+const fee = { denom: 'uiris', amount: process.env.VUE_APP_HUB_TX_FEE }
 const gas = process.env.VUE_APP_HUB_TX_GAS
 const chainId = process.env.VUE_APP_HUB_CHAIN_ID
 const slippageRate = 0.01
@@ -88,10 +88,12 @@ export class CoinSwap {
                 let postData = stdTx.GetData()
                 return parent.client.sendRawTransaction(postData, { mode: 'commit' })
             }).catch(e => {
+                window.console.log(e)
                 throw e
             })
-        }).catch(() => {
-            throw new Error('connect ledger failed,please reconnection ledger')
+        }).catch(e => {
+            window.console.log(e)
+            throw new Error('connect ledger failed, please reconnection ledger')
         })
     }
 
@@ -133,9 +135,8 @@ export class CoinSwap {
 }
 
 export class Token {
-
     static getUniDenom(tokenId) {
-        return `iris:${tokenId}`
+        return `uni:${tokenId}`
     }
 
     static getMainDenom(denom) {
@@ -147,19 +148,19 @@ export class Token {
     }
 
     static minTokenToUniDenom(denom) {
-        if (denom === 'iris-atto') {
+        if (denom === 'uiris') {
             return 'uni:iris'
         }
-        let domain = denom.replace('-min', '')
+        let domain = denom.substr(1)
         return `uni:${domain}`
     }
 
     static uniDenomToMinDenom(denom) {
         if (denom === 'uni:iris') {
-            return 'iris-atto'
+            return 'uiris'
         }
         let domain = denom.replace('uni:', '')
-        return `${domain}-min`
+        return `u${domain}`
     }
 
     static toFix(amount) {
