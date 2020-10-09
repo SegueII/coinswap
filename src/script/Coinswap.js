@@ -1,73 +1,74 @@
-import {Ledger} from './Ledger';
+import { Ledger } from './Ledger'
 
 
-const fee = {denom: "iris-atto", amount: process.env.VUE_APP_HUB_TX_FEE};
-const gas = process.env.VUE_APP_HUB_TX_GAS;
-const chainId = process.env.VUE_APP_HUB_CHAIN_ID;
-const slippageRate = 0.01;
+const fee = { denom: 'iris-atto', amount: process.env.VUE_APP_HUB_TX_FEE }
+const gas = process.env.VUE_APP_HUB_TX_GAS
+const chainId = process.env.VUE_APP_HUB_CHAIN_ID
+const slippageRate = 0.01
 
 export class CoinSwap {
     constructor(client) {
-        this.client = client;
+        this.client = client
         this.ledger = new Ledger()
     }
 
-    sendSwapTx(input, output,recipient, isBuyOrder) {
-        if(isBuyOrder){
+    sendSwapTx(input, output, recipient, isBuyOrder) {
+        if (isBuyOrder) {
             input.amount = input.amount * (1 + slippageRate)
-        }else {
+        } else {
             output.amount = output.amount * (1 - slippageRate)
         }
-        return this._sendRawTransaction("swap_order",{
+        return this._sendRawTransaction('swap_order', {
             input: input,
             output: output,
             recipient: recipient,
-            isBuyOrder: isBuyOrder});
+            isBuyOrder: isBuyOrder
+        })
     }
 
-    sendAddLiquidityTx(maxToken,exactIrisAmt,minLiquidity,isCreate){
+    sendAddLiquidityTx(maxToken, exactIrisAmt, minLiquidity, isCreate) {
         if (!isCreate) {
-            maxToken.amount = maxToken.amount * (1 + slippageRate);
+            maxToken.amount = maxToken.amount * (1 + slippageRate)
         }
-        minLiquidity = minLiquidity * (1 - slippageRate);
-        return this._sendRawTransaction("add_liquidity",{
+        minLiquidity = minLiquidity * (1 - slippageRate)
+        return this._sendRawTransaction('add_liquidity', {
             maxToken: maxToken,
             exactIrisAmt: exactIrisAmt,
             minLiquidity: minLiquidity
-        });
+        })
     }
 
-    sendRemoveLiquidityTx(withdrawLiquidity,minIrisAmt,minToken){
-        minIrisAmt = minIrisAmt * (1 - slippageRate);
-        minToken = minToken * (1 - slippageRate);
-        return this._sendRawTransaction("remove_liquidity",{
+    sendRemoveLiquidityTx(withdrawLiquidity, minIrisAmt, minToken) {
+        minIrisAmt = minIrisAmt * (1 - slippageRate)
+        minToken = minToken * (1 - slippageRate)
+        return this._sendRawTransaction('remove_liquidity', {
             withdrawLiquidity: withdrawLiquidity,
             minIrisAmt: minIrisAmt,
             minToken: minToken
-        });
+        })
     }
 
-    _sendRawTransaction(type,req){
-        let parent = this;
-        return this.ledger.getAddressAndPubKey().then( async account => {
-            let result = await parent.client.getAccount(account.addr);
-            let acc = result.value;
-            let msg = null;
+    _sendRawTransaction(type, req) {
+        let parent = this
+        return this.ledger.getAddressAndPubKey().then(async account => {
+            let result = await parent.client.getAccount(account.addr)
+            let acc = result.value
+            let msg = null
             switch (type) {
-                case "swap_order" : {
-                    msg = this._createMsgSwap(account.addr,req);
+                case 'swap_order': {
+                    msg = this._createMsgSwap(account.addr, req)
                     break
                 }
-                case "add_liquidity" : {
-                    msg = this._createAddLiquidityMsg(req);
+                case 'add_liquidity': {
+                    msg = this._createAddLiquidityMsg(req)
                     break
                 }
-                case "remove_liquidity" : {
-                    msg = this._createRemoveLiquidityMsg(req);
+                case 'remove_liquidity': {
+                    msg = this._createRemoveLiquidityMsg(req)
                     break
                 }
-                default : {
-                    throw new Error("unSupport msg")
+                default: {
+                    throw new Error('unSupport msg')
                 }
             }
             let tx = {
@@ -79,24 +80,24 @@ export class CoinSwap {
                 gas: gas,
                 type: type,
                 msg: msg
-            };
-            let stdTx = parent.client.getBuilder().buildTx(tx);
-            let signMsg = JSON.stringify(stdTx.GetSignBytes());
-            return parent.ledger.signTx(signMsg).then( signature => {
-                stdTx.SetSignature({pub_key: account.pubKey, signature: signature});
-                let postData = stdTx.GetData();
-                return parent.client.sendRawTransaction(postData,{mode : "commit"})
+            }
+            let stdTx = parent.client.getBuilder().buildTx(tx)
+            let signMsg = JSON.stringify(stdTx.GetSignBytes())
+            return parent.ledger.signTx(signMsg).then(signature => {
+                stdTx.SetSignature({ pub_key: account.pubKey, signature: signature })
+                let postData = stdTx.GetData()
+                return parent.client.sendRawTransaction(postData, { mode: 'commit' })
             }).catch(e => {
-                throw e;
-            });
+                throw e
+            })
         }).catch(() => {
-            throw new Error("connect ledger failed,please reconnection ledger")
-        });
+            throw new Error('connect ledger failed,please reconnection ledger')
+        })
     }
 
-    _createMsgSwap(address,req){
-        if(!req.recipient){
-            req.recipient =  address
+    _createMsgSwap(address, req) {
+        if (!req.recipient) {
+            req.recipient = address
         }
         return {
             input: {
@@ -112,18 +113,18 @@ export class CoinSwap {
         }
     }
 
-    _createAddLiquidityMsg(req){
+    _createAddLiquidityMsg(req) {
         return {
-            max_token : req.maxToken,
+            max_token: req.maxToken,
             exact_iris_amt: req.exactIrisAmt,
             min_liquidity: req.minLiquidity,
             deadline: new Date().getTime()
         }
     }
 
-    _createRemoveLiquidityMsg(req){
+    _createRemoveLiquidityMsg(req) {
         return {
-            withdraw_liquidity : req.withdrawLiquidity,
+            withdraw_liquidity: req.withdrawLiquidity,
             min_iris_amt: req.minIrisAmt,
             min_token: req.minToken,
             deadline: new Date().getTime()
@@ -133,35 +134,35 @@ export class CoinSwap {
 
 export class Token {
 
-    static getUniDenom(tokenId){
+    static getUniDenom(tokenId) {
         return `iris:${tokenId}`
     }
 
     static getMainDenom(denom) {
-        if (denom === "uni:iris") {
-            return "IRIS"
+        if (denom === 'uni:iris') {
+            return 'IRIS'
         }
-        let domain = denom.replace("uni:", "");
+        let domain = denom.replace('uni:', '')
         return domain.toUpperCase()
     }
 
     static minTokenToUniDenom(denom) {
-        if (denom === "iris-atto") {
-            return "uni:iris"
+        if (denom === 'iris-atto') {
+            return 'uni:iris'
         }
-        let domain = denom.replace("-min", "");
+        let domain = denom.replace('-min', '')
         return `uni:${domain}`
     }
 
     static uniDenomToMinDenom(denom) {
-        if (denom === "uni:iris") {
-            return "iris-atto"
+        if (denom === 'uni:iris') {
+            return 'iris-atto'
         }
-        let domain = denom.replace("uni:", "");
+        let domain = denom.replace('uni:', '')
         return `${domain}-min`
     }
 
-    static toFix(amount){
+    static toFix(amount) {
         return Number(amount).toFixed(10)
     }
 }
