@@ -21,7 +21,7 @@ export class Ledger {
         })
     }
     signTx(msg) {
-        return this.app.sign(path, msg).then((response) => {
+        return this.app.sign(path, msg).then(response => {
             return response.signature
         }).catch(e => {
             window.console.log(e)
@@ -37,11 +37,10 @@ export class Ledger {
 function _createLedgerApp (callback) {
     let appCreate = (okFun, failFun) => {
         TransportWebUSB.create().then(transport => {
-            crypto.getLedger().create(transport).then((app) => {
+            crypto.getLedger().create(transport).then(app => {
                 okFun(app)
             })
         }).catch(e => {
-            // XXX
             window.console.log(e)
             failFun(e)
         })
