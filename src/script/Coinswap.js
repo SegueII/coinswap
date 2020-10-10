@@ -1,9 +1,14 @@
 import { Ledger } from './Ledger'
 
 
-const fee = { denom: 'uiris', amount: process.env.VUE_APP_HUB_TX_FEE }
-const gas = process.env.VUE_APP_HUB_TX_GAS
-const chainId = process.env.VUE_APP_HUB_CHAIN_ID
+const fee = {
+    amount: [
+        { denom: 'uiris', amount: process.env.VUE_APP_HUB_TX_FEE }
+    ],
+    gasLimit: '200000'
+}
+
+const chainID = process.env.VUE_APP_HUB_CHAIN_ID
 const slippageRate = 0.01
 
 export class CoinSwap {
@@ -54,40 +59,46 @@ export class CoinSwap {
             window.console.log(account)
             let result = await parent.client.getAccount(account.addr)
             let acc = result.account
-            let msg = null
+            let msgs = null
             switch (type) {
                 case 'swap_order': {
-                    msg = this._createMsgSwap(account.addr, req)
+                    msgs = this._createMsgSwap(account.addr, req)
                     break
                 }
                 case 'add_liquidity': {
-                    msg = this._createAddLiquidityMsg(req)
+                    msgs = this._createAddLiquidityMsg(account.addr, req)
                     break
                 }
                 case 'remove_liquidity': {
-                    msg = this._createRemoveLiquidityMsg(req)
+                    msgs = this._createRemoveLiquidityMsg(account.addr, req)
                     break
                 }
                 default: {
-                    throw new Error('unSupport msg')
+                    throw new Error('unsupport msgs')
                 }
             }
             let tx = {
-                chain_id: chainId,
-                from: account.addr,
+                chain_id: chainID,
                 account_number: acc.account_number,
                 sequence: acc.sequence,
-                fees: fee,
-                gas: gas,
-                type: type,
-                msg: msg
+                fee: fee,
+                msgs: msgs
             }
+            window.console.log(tx)
+
             let stdTx = parent.client.getBuilder().buildTx(tx)
-            let signMsg = JSON.stringify(stdTx.GetSignBytes())
+            window.console.log(account.pubKey)
+
+            let rawPubKey = crypto.Amino.MarshalBinary('tendermint/PubKeySecp256k1', account.pubKey)
+            let pubKey = crypto.Codec.Hex.bytesToHex(rawPubKey)
+
+            stdTx.setPubKey(pubKey);
+            let signMsg = JSON.stringify(stdTx.getSignDoc())
+
             return parent.ledger.signTx(signMsg).then(signature => {
                 stdTx.SetSignature({ pub_key: account.pubKey, signature: signature })
-                let postData = stdTx.GetData()
-                return parent.client.sendRawTransaction(postData, { mode: 'commit' })
+                let payload = stdTx.GetData()
+                return parent.client.sendRawTransaction(payload, { mode: 'commit' })
             }).catch(e => {
                 window.console.log(e)
                 throw e
@@ -98,40 +109,51 @@ export class CoinSwap {
         })
     }
 
-    _createMsgSwap(address, req) {
+    _createMsgSwap(sender, req) {
         if (!req.recipient) {
-            req.recipient = address
+            req.recipient = sender
         }
-        return {
-            input: {
-                address: address,
-                coin: req.input,
-            },
-            output: {
-                address: req.recipient,
-                coin: req.output,
-            },
-            deadline: new Date().getTime(),
-            isBuyOrder: req.isBuyOrder
-        }
+        return [{
+            type: 'swap_order',
+            value: {
+                input: {
+                    address: sender,
+                    coin: req.input,
+                },
+                output: {
+                    address: req.recipient,
+                    coin: req.output,
+                },
+                deadline: new Date().getTime(),
+                isBuyOrder: req.isBuyOrder
+            }
+        }]
     }
 
-    _createAddLiquidityMsg(req) {
-        return {
-            max_token: req.maxToken,
-            exact_iris_amt: req.exactIrisAmt,
-            min_liquidity: req.minLiquidity,
-            deadline: new Date().getTime()
-        }
+    _createAddLiquidityMsg(sender, req) {
+        return [{
+            type: 'add_liquidity',
+            value: {
+                max_token: req.maxToken,
+                exact_standard_amt: req.exactIrisAmt,
+                min_liquidity: req.minLiquidity,
+                deadline: new Date().getTime(),
+                sender: sender
+            }
+        }]
     }
 
-    _createRemoveLiquidityMsg(req) {
-        return {
-            withdraw_liquidity: req.withdrawLiquidity,
-            min_iris_amt: req.minIrisAmt,
-            min_token: req.minToken,
-            deadline: new Date().getTime()
-        }
+    _createRemoveLiquidityMsg(sender, req) {
+        return [{
+            type: 'remove_liquidity',
+            value: {
+                withdraw_liquidity: req.withdrawLiquidity,
+                min_token: req.minToken,
+                min_standard_amt: req.minIrisAmt,
+                deadline: new Date().getTime(),
+                sender: sender
+            }
+        }]
     }
 }
 

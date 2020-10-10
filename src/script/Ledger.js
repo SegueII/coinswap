@@ -12,7 +12,7 @@ export class Ledger {
     }
 
     getAddressAndPubKey() {
-        return this.app.getAddressAndPubKey(path, 'faa').then(result => {
+        return this.app.getAddressAndPubKey(path, 'iaa').then(result => {
             window.console.log(result)
             return { addr: result.bech32_address, pubKey: result.compressed_pk }
         }).catch(e => {
