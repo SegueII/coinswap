@@ -51,8 +51,9 @@ export class CoinSwap {
     _sendRawTransaction(type, req) {
         let parent = this
         return this.ledger.getAddressAndPubKey().then(async account => {
+            window.console.log(account)
             let result = await parent.client.getAccount(account.addr)
-            let acc = result.value
+            let acc = result.account
             let msg = null
             switch (type) {
                 case 'swap_order': {

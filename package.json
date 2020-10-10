@@ -13,8 +13,8 @@
         "element-ui": "^2.11.1",
         "vue": "^2.6.10",
         "@ledgerhq/hw-transport-webusb": "latest",
-        "irisnet-crypto": "git+https://github.com/hangts/irisnet-crypto.git#feature/RPC",
-        "irishub-sdk-js": "git+https://github.com/SegueII/irishub-sdk-js.git#ledger"
+        "irisnet-crypto": "git+https://github.com/SegueII/irisnet-crypto.git#coinswap",
+        "irishub-sdk-js": "git+https://github.com/SegueII/irishub-sdk-js.git#coinswap"
     },
     "devDependencies": {
         "@vue/cli-plugin-babel": "^3.10.0",
